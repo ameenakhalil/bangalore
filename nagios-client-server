@@ -1,0 +1,44 @@
+rpm -Uvh https://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm 
+rpm -Uvh http://rpms.remirepo.net/enterprise/remi-release-6.rpm
+yum -y install nagios nagios-plugins-all nrpe
+chkconfig nrpe on
+vim /etc/nagios/nrpe.cfg
+iptables -N NRPE
+iptables -I INPUT -s 0/0 -p tcp --dport 5666 -j NRPE
+iptables -I NRPE -s 18.234.153.103 -j ACCEPT
+iptables -A NRPE -s 0/0 -j DROP
+/etc/init.d/iptables save 
+service nrpe start
+vim /etc/nagios/nagios.cfg
+mkdir /etc/nagios/servers/
+cd /etc/nagios/servers
+vim /etc/nagios/servers/client.cfg
+
+define host {
+       use                      linux-server
+       host_name                ip-172-31-42-167.ec2.internal
+       address                  54.86.88.176
+      }
+define service {
+       use                      generic-service
+       host_name                ip-172-31-42-167.ec2.internal
+       service_description      PING
+       check_command            check_ping!106.6.20%!560.e.60%
+       }
+define service {
+       use                      generic-service
+       host_name                ip-172-31-42-167.ec2.internal
+       service_description      SSH
+       check_command            check_ssh
+       notifications_enabled    0
+       }
+define service {
+       use                      generic-service
+       host_name                ip-172-31-42-167.ec2.internal
+       service_description      Current Load
+       check_command            check_local_load!5.6.4.0.3.e!16.6.6.e,4.9
+       }
+
+
+chown -R nagios. /etc/nagios/
+service nagios restart
